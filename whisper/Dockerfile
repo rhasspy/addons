@@ -13,7 +13,9 @@ ARG \
     FASTER_WHISPER_VERSION \
     CTRANSLATE2_VERSION \
     SHERPA_ONNX_VERSION \
-    TORCH_VERSION
+    TORCH_VERSION \
+    AIOHTTP_VERSION \
+    TOKENIZERS_VERSION
 
 RUN \
     apt-get update \
@@ -32,7 +34,7 @@ RUN \
         wheel \
     && .venv/bin/pip3 install --no-cache-dir \
         "wyoming[zeroconf]==${WYOMING_VERSION}" \
-        "wyoming-faster-whisper[sherpa] @ https://github.com/rhasspy/wyoming-faster-whisper/archive/refs/tags/v${WYOMING_WHISPER_VERSION}.tar.gz" \
+        "wyoming-faster-whisper[sherpa,hass,qwen3-asr] @ https://github.com/rhasspy/wyoming-faster-whisper/archive/refs/tags/v${WYOMING_WHISPER_VERSION}.tar.gz" \
         "transformers==${TRANSFORMERS_VERSION}" \
         "onnx-asr[cpu,hub]==${ONNX_ASR_VERSION}" \
         "funasr==${FUNASR_VERSION}" \
@@ -40,6 +42,8 @@ RUN \
         "faster-whisper==${FASTER_WHISPER_VERSION}" \
         "ctranslate2==${CTRANSLATE2_VERSION}" \
         "sherpa-onnx==${SHERPA_ONNX_VERSION}" \
+        "aiohttp==${AIOHTTP_VERSION}" \
+        "tokenizers==${TOKENIZERS_VERSION}" \
     \
     && .venv/bin/pip3 install --no-cache-dir \
         --index-url 'https://download.pytorch.org/whl/cpu' \

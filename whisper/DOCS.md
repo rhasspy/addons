@@ -70,6 +70,8 @@ Path to a converted model directory, or a CTranslate2-converted Whisper model ID
 
 If `custom_model_type` is set to `transformers`, a HuggingFace transformers Whisper model ID from HuggingFace like "openai/whisper-tiny.en" must be used.
 
+If `custom_model_type` is set to `qwen3-asr`, an ONNX export of Qwen3-ASR must be used, such as "rhasspy/qwen3-asr-0.6b-onnx-int4" (the split-decoder export; the default is the merged one).
+
 To use a local custom Whisper model, first create a `models` subdirectory in the app's configuration directory if it does not already exist. Then copy your model directory into:
 `/addon_configs/core_whisper/models/<your-model-dir>`.
 Then, set the `custom_model` path to:
@@ -91,6 +93,23 @@ Increasing the beam size will increase accuracy at the cost of performance.
 Description of audio that can help Whisper transcribe unusual words better.
 See [this discussion](https://github.com/openai/whisper/discussions/963) for an example.
 
+### Option: `bias_names`
+
+Bias transcription toward the names in your Home Assistant. This is disabled by default.
+
+When enabled, the add-on reads the names of your [conversation-exposed entities][expose] — plus their aliases and the names of your areas and floors — and adds them to the initial prompt. A command that says one of those names is then much more likely to come back spelled the way you named it: "What's the temperature of the incubi?" becomes "What's the temperature of the Ecobee?".
+
+Only names are read, and only to help recognize them; the add-on never calls a service or handles an intent.
+
+Notes:
+
+- Your `initial_prompt` is kept at the front of the prompt, so the two work together.
+- Whisper's prompt only holds a few dozen names. If you expose more than that, areas and floors that hold something exposed come first, then the entities in the domains people say out loud (lights, switches, fans, media players, climate, scenes, todo lists), then everything else.
+- Names are refreshed in the background while you are still speaking, so this does not add latency. If Home Assistant is slow or unreachable, the previous names are used and transcription still succeeds.
+- Only backends that accept a prompt use the names: `faster-whisper`, `transformers`, and `qwen3-asr`. The `sherpa`, `onnx-asr`, and `funasr` backends ignore it.
+
+[expose]: https://www.home-assistant.io/voice_control/voice_remote_expose_devices/
+
 ### Option: `stt_library`
 
 Speech-to-text backend library to use:
@@ -101,8 +120,11 @@ Speech-to-text backend library to use:
 - `transformers` - force [HuggingFace transformers][transformers] backend
 - `onnx-asr` - force [onnx asr][onnx-asr] backend
 - `funasr` - force [funasr][] backend
+- `qwen3-asr` - force [Qwen3-ASR][qwen3-asr] backend
 
 **Note**: When `custom_model` is set, then `custom_model_type` will override `stt_library` when set to "auto".
+
+**Note**: `auto` never selects `qwen3-asr`; it must be chosen explicitly. The default model is 785 MB, needs around 1.6 GB of RAM, and is slower than the per-language defaults above. What it buys you is much stronger biasing: `initial_prompt` and `bias_names` are fed to the model as a context prompt rather than as a Whisper-style prefix, which is the best option here for getting unusual entity names spelled correctly.
 
 ### Option: `whisper_task`
 
@@ -153,6 +175,10 @@ add-on selects a backend/model based on your `language` and hardware:
   `zh-CN`/`zh-TW`/`zh-HK` are mapped automatically).
 - **Russian** (`ru`) → the GigaAM model via the onnx-asr backend.
 - **Everything else** → faster-whisper.
+
+If entity names are what you keep having to repeat, `stt_library` = "qwen3-asr"
+together with `bias_names` = true biases harder than any of the above, at the
+cost of a larger model, more RAM, and more time per request.
 
 Two tips for non-English use:
 
@@ -222,3 +248,4 @@ In case you've found an bug, please [open an issue on our GitHub][issue].
 [sherpa-onnx]: https://github.com/k2-fsa/sherpa-onnx
 [onnx-asr]: https://github.com/istupakov/onnx-asr
 [funasr]: https://github.com/modelscope/FunASR
+[qwen3-asr]: https://huggingface.co/Qwen/Qwen3-ASR-0.6B

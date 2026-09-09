@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.7.0
+
+- Add `bias_names` option to bias transcription toward the names in your Home
+  Assistant: the names and aliases of your exposed entities, plus your area and
+  floor names, are added to the initial prompt, so "What's the temperature of
+  the incubi?" comes back as "What's the temperature of the Ecobee?"
+  - Off by default. Names are read over the Home Assistant API through the
+    Supervisor proxy, and refreshed in the background while you are still
+    speaking, so it costs no latency
+  - Only the prompt-capable backends (`faster-whisper`, `transformers`,
+    `qwen3-asr`) use the names; `sherpa`, `onnx-asr` and `funasr` ignore the
+    prompt
+- Add [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) as an
+  `stt_library`/`custom_model_type` choice, defaulting to
+  `rhasspy/qwen3-asr-0.6b-onnx-int4-merged`
+  - Opt-in only: `auto` never selects it. The model is 785 MB and needs around
+    1.6 GB of RAM, and it is slower than the per-language defaults
+  - It takes `initial_prompt` and `bias_names` as a context prompt rather than a
+    Whisper-style prefix, which biases entity names considerably harder
+- Upgrade to wyoming-faster-whisper 3.7.0
+
 ## 3.5.3
 
 - Shut down cleanly when the app is stopped

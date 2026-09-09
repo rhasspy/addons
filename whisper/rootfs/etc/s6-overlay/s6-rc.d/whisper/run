@@ -30,6 +30,13 @@ elif [ "${model}" != 'auto' ]; then
     fi
 fi
 
+if bashio::config.true 'bias_names'; then
+    # Bias transcription toward the names of exposed entities, areas and floors
+    # by reading them from Home Assistant through the Supervisor proxy.
+    flags+=('--hass-api' 'http://supervisor/core/api')
+    flags+=('--hass-token' "${SUPERVISOR_TOKEN}")
+fi
+
 if bashio::config.true 'sherpa_streaming'; then
     flags+=('--sherpa-streaming')
 fi
@@ -46,7 +53,6 @@ if bashio::config.true 'debug_logging'; then
     flags+=('--debug')
 fi
 
-# shellcheck disable=SC2068
 exec python3 -m wyoming_faster_whisper \
     --uri 'tcp://0.0.0.0:10300' \
     --zeroconf \
@@ -57,4 +63,4 @@ exec python3 -m wyoming_faster_whisper \
     --initial-prompt "$(bashio::config 'initial_prompt')" \
     --whisper-task "$(bashio::config 'whisper_task')" \
     --data-dir /data \
-    --download-dir /data ${flags[@]}
+    --download-dir /data "${flags[@]}"

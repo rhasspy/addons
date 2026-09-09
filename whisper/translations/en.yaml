@@ -38,6 +38,14 @@ configuration:
     description: >-
       Description of audio that can help Whisper transcribe unusual words
       better.
+  bias_names:
+    name: Bias toward Home Assistant names
+    description: >-
+      Bias transcription toward the names in your Home Assistant.
+
+      The names of your exposed entities, their aliases, and your areas and
+      floors are added to the initial prompt, so a command that says one of
+      them is more likely to come back spelled the way you named it.
   stt_library:
     name: Speech-to-text library
     description: >-

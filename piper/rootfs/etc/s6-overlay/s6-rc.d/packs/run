@@ -1,0 +1,108 @@
+#!/command/with-contenv bashio
+# vim: ft=bash
+# shellcheck shell=bash
+# ==============================================================================
+# Install the optional feature packs selected in the app configuration.
+#
+# Japanese, Thai and OmniVoice are not part of the image: together they are
+# ~1.5 GB, for options most installs never turn on. They are installed here
+# instead, into the container's own site-packages -- which is thrown away with
+# the container -- from a uv cache kept in /data.
+#
+# uv symlinks the files out of that cache rather than copying them, so the
+# installed tree is a few MB of links and only the cache takes real space. And
+# because the tree is rebuilt on every start against the interpreter that is
+# actually running, there is nothing to keep in sync: a base image with a new
+# Python simply misses in the cache and downloads again.
+#
+# A pack that fails to install is not fatal here. Whether it was actually
+# needed depends on the backend and voice, so the Piper service decides that
+# and fails with a message naming the option to turn on.
+# ==============================================================================
+
+export UV_CACHE_DIR='/data/uv-cache'
+export UV_SYSTEM_PYTHON=true
+
+# /data and the container filesystem are different mounts, so uv's default
+# hardlink mode silently degrades to full copies and every pack would cost its
+# size twice -- once in the cache, once installed. Symlinks span mounts.
+export UV_LINK_MODE=symlink
+
+mkdir -p "${UV_CACHE_DIR}"
+
+# Try the cache before the network, so a restart costs no index round trip and
+# an installation without internet access still comes back up. Falls back to a
+# normal online install whenever anything is missing from the cache.
+install_pack() {
+    local name="${1}"
+    shift
+
+    if uv pip install --quiet --offline "$@" > /dev/null 2>&1; then
+        bashio::log.info "${name}: restored from cache"
+        return 0
+    fi
+
+    bashio::log.info "${name}: downloading, this can take several minutes..."
+    if uv pip install --quiet "$@"; then
+        bashio::log.info "${name}: installed"
+        return 0
+    fi
+
+    bashio::log.warning "${name}: install failed"
+    return 1
+}
+
+packs_selected='false'
+
+if bashio::config.true 'enable_japanese'; then
+    packs_selected='true'
+    install_pack 'Japanese (OpenJTalk)' 'piper-tts[ja]'
+fi
+
+if bashio::config.true 'enable_thai'; then
+    packs_selected='true'
+    # tltk imports requests without declaring it. wyoming-piper's own "th"
+    # extra works around that, but this installs piper-tts[th] directly to
+    # avoid re-fetching wyoming-piper, so the workaround is repeated here.
+    install_pack 'Thai (TLTK)' 'piper-tts[th]' requests
+fi
+
+if [[ "$(bashio::config 'backend')" == 'omnivoice' ]]; then
+    packs_selected='true'
+
+    if [[ "$(uname -m)" != 'x86_64' ]]; then
+        bashio::log.warning \
+            "OmniVoice is being installed on $(uname -m). It is designed for a" \
+            "desktop or server CPU and will be very slow on this hardware."
+    fi
+
+    # Three steps, because this pack cannot be expressed as one requirement:
+    # torch has to come from the CPU index (PyPI's default wheels carry ~2.7 GB
+    # of CUDA libraries that are never loaded), and the omnivoice package has to
+    # be installed without its dependencies -- gradio, librosa, webdataset and
+    # tensorboardx are only used by its demo and training paths, which this
+    # backend never imports. The omnivoice-deps extra pins what it does import.
+    install_pack 'OmniVoice (PyTorch, CPU)' \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch \
+        torchaudio \
+        && install_pack 'OmniVoice (dependencies)' \
+            "wyoming-piper[omnivoice-deps] @ https://github.com/rhasspy/wyoming-piper/archive/refs/tags/v${WYOMING_PIPER_VERSION}.tar.gz" \
+        && install_pack 'OmniVoice' --no-deps omnivoice
+fi
+
+# Report what /data holds. On Home Assistant OS it cannot be browsed without a
+# host shell, so the log is the only place this is visible.
+if bashio::var.true "${packs_selected}"; then
+    bashio::log.info "Pack cache: $(du -sh "${UV_CACHE_DIR}" | cut -f1) in ${UV_CACHE_DIR}"
+fi
+
+if bashio::config.true 'debug_logging'; then
+    while read -r entry; do
+        bashio::log.info "/data: ${entry}"
+    done < <(du -sh /data/* 2>/dev/null)
+fi
+
+# Never block Piper from starting: the service checks for what it actually
+# needs and reports a usable error itself.
+exit 0

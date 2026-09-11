@@ -115,8 +115,9 @@ Print DEBUG level messages to the app's log.
 
 The app has a small web interface for managing voices, reachable with the "Open
 Web UI" button on the app page. It is served through Home Assistant ingress, so
-it is only available to Home Assistant administrators and is never exposed on
-your network.
+using it means going through Home Assistant and being an administrator. Its port
+is not published, and it only answers Home Assistant's ingress proxy — other
+apps on the same machine are refused.
 
 It has two sections:
 

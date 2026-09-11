@@ -5,7 +5,9 @@ configuration:
     description: >-
       The text-to-speech engine to use. `piper` is fast and runs on any
       hardware. `omnivoice` is experimental: much higher quality, supports
-      voice cloning, and needs a desktop or server CPU (amd64 only).
+      voice cloning, but it is much slower and really wants a desktop or
+      server CPU. It will run on other hardware, but expect it to be too slow
+      to be useful there.
   voice:
     name: Voice
     description: >-

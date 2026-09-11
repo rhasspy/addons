@@ -11,11 +11,13 @@
 # <language>/<name>/ directory instead.
 readonly omnivoice_voices_dir='/data/omnivoice_voices'
 
-# The web UI is only reachable through Home Assistant ingress, which proxies to
-# the container's address -- so it has to bind to more than loopback. The port
-# is deliberately not published in config.yaml: the UI has no authentication of
-# its own.
+# Ingress proxies to the container's address rather than to loopback, so the web
+# UI has to bind every interface -- which also puts it in reach of every other
+# app on the same Docker network. It has no authentication of its own, so the
+# peer address is restricted to the ingress proxy, whose address is fixed. The
+# port is deliberately not published in config.yaml either.
 readonly web_server_port=8099
+readonly ingress_proxy='172.30.32.2'
 
 # True if a module the "packs" service installs is importable.
 have_module() {
@@ -97,4 +99,5 @@ exec python3 -m wyoming_piper \
     --omnivoice-ref-dir "${omnivoice_voices_dir}" \
     --web-server \
     --web-server-host '0.0.0.0' \
-    --web-server-port "${web_server_port}" ${flags[@]}
+    --web-server-port "${web_server_port}" \
+    --web-server-allow "${ingress_proxy}" ${flags[@]}

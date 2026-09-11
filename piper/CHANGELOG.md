@@ -1,8 +1,8 @@
 # Changelog
 
-## 2.5.1
+## 2.5.2
 
-- Upgrade to `wyoming-piper` 2.5.1
+- Upgrade to `wyoming-piper` 2.5.2
 - Add Japanese (OpenJTalk) and Thai (TLTK) support behind the new
   `enable_japanese` and `enable_thai` options, and the Thai voice they enable
   (`th_TH-tsync2-medium`)
@@ -23,11 +23,13 @@
   previous size instead of growing to ~2 GB. The download is cached in `/data`
   and reused on later starts
 - Add a voice management web interface, available through the app's "Open Web
-  UI" button (ingress). Upload and delete custom Piper voices, and record
-  OmniVoice cloning voices, without needing file access to `/share`
+  UI" button (ingress). Upload and delete custom Piper voices, and upload
+  OmniVoice cloning voices, without needing file access to `/share`. Only Home
+  Assistant's ingress proxy is allowed to reach it
 - Add a `backend` option to switch between `piper` (default) and the
   experimental `omnivoice` backend. OmniVoice is higher quality and supports
-  voice cloning, but is much slower and is only available on `amd64`
+  voice cloning, but is much slower and really wants a desktop or server CPU;
+  it runs elsewhere with a warning, but expect it to be too slow to be useful
 - Add an `omnivoice_steps` option to trade OmniVoice quality for speed
 - Custom OmniVoice voices are stored in `/data/omnivoice_voices`, kept separate
   from the Piper voice models
